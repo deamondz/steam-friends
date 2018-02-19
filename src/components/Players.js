@@ -31,8 +31,8 @@ const Avatar = styled.div`
 
 const Input = styled.input`
     background: #0d131b;
-    border: 1px solid;
-    border-radius: 3px;
+    border: 1px solid rgba(255, 255, 255, .2);
+    border-radius: 1px;
     color: #ffffff;
     text-align: center;
     
@@ -41,7 +41,12 @@ const Input = styled.input`
     width: 100%;
 `
 
-const FakeInput = Input.withComponent('div')
+const Name = styled.div`
+    color: #ffffff;
+    text-align: center;
+    font-size: 1rem;
+    line-height: 32px;
+`
 
 const Wrapper = styled.div`
     background: #0d131b;
@@ -96,33 +101,65 @@ const Wrapper = styled.div`
     `}
 `
 
-export const AppendPlayer = styled(({onClick, ...rest}) => (
-    <Wrapper onClick={onClick} {...rest}>
-        <Avatar />
-        <FakeInput>Добавить игрока</FakeInput>
-    </Wrapper>
-))`
-    cursor: pointer;
-    
-    &:hover{
-        ${Avatar}{
-            &::before, &::after{
-                opacity: 1;
-            }
-        }
-    }
-
+const WrapperAppend = Wrapper.extend`
     ${Avatar}{
         &::before{ transform: translate3d(-50%, -50%, 0) rotateZ(0deg); }
         &::after{ transform: translate3d(-50%, -50%, 0) rotateZ(90deg); }
     }
 `
 
-export function Player({player: {avatar, name, loading}, onChange, onBlur, onRemove}) {
+export class AppendPlayer extends React.Component {
+    constructor() {
+        super()
+
+        this.state = {
+            name: ''
+        }
+    }
+
+    _handleName = (e) => {
+        this.setState({name: e.target.value})
+    }
+
+    _appendPlayer = () => {
+        this.props.appendPlayer(this.state.name)
+
+        this._resetName()
+    }
+
+    _resetName = () => {
+        this.setState({name: ''})
+    }
+
+    _onSubmit = (e) => {
+        if(e.which === 13) {
+            e.preventDefault()
+
+            this._appendPlayer()
+        }
+    }
+
+    render() {
+        return (
+            <WrapperAppend onKeyDown={this._onSubmit}>
+                <Avatar onClick={this._appendPlayer} />
+                <Input
+                    onChange={this._handleName}
+                    value={this.state.name}
+                    tabIndex={0}
+                    autofocus
+                    placeholder="Имя игрока"
+                />
+            </WrapperAppend>
+        )
+    }
+}
+
+export function Player({player: {avatar, name, loading}, onRemove}) {
     return (
         <Wrapper loading={loading}>
             <Avatar src={avatar} onClick={onRemove} />
-            <Input type="text" value={name} onChange={onChange} onBlur={onBlur} />
+            <Name>{name}</Name>
         </Wrapper>
     )
 }

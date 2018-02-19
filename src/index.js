@@ -1,6 +1,10 @@
-import React, {Fragment} from 'react'
-import {render} from 'react-dom'
-import {injectGlobal} from 'styled-components'
+import React, { Fragment } from 'react'
+import { render } from 'react-dom'
+import { injectGlobal } from 'styled-components'
+import Button from './components/Button'
+import Container from './components/Container'
+import Games, { Game, PreloadGame } from './components/Games'
+import Players, { AppendPlayer, Player } from './components/Players'
 
 injectGlobal`
     *, *::before, *::after{
@@ -44,38 +48,36 @@ injectGlobal`
     .text-center{ text-align: center }
 `
 
-import Container from './components/Container'
-import Button from './components/Button'
-import Players, {Player, AppendPlayer} from './components/Players'
-import Games, {Game, PreloadGame} from './components/Games'
-
 const API_URL = 'http://localhost:3000/api'
 
 class App extends React.Component {
-    constructor() {
-        super()
-
-        this.state = {
-            players: [
-                {name: 'gwellir'},
-                {name: 'hwestar'}
-            ],
-            mutualGames: null,
-        }
-    }
-
-    resetGames = () => {
-        this.setState({mutualGames: null})
-    }
-
-    appendPlayer = (e) => {
-        e.preventDefault()
+    appendPlayer = (name) => {
+        if (!name) return
 
         const players = [...this.state.players]
+        players.push({name, loading: true})
+        this.setState({players, mutualGames: null, message: null})
 
-        players.push({name: ''})
+        this.getPlayerInfo(name)
+            .then((profileInfo) => {
+                const players = [...this.state.players]
 
-        this.setState({players, mutualGames: null})
+                players.splice(-1, 1, {
+                    name,
+                    avatar: profileInfo.avatarfull,
+                    steamId: profileInfo.steamid,
+                    loading: false,
+                })
+
+                this.setState({players})
+            })
+            .catch(() => {
+                const players = [...this.state.players]
+
+                players.splice(-1, 1)
+
+                this.setState({players})
+            })
     }
 
     removePlayer = (playerIndex, e) => {
@@ -84,46 +86,19 @@ class App extends React.Component {
         const players = [...this.state.players]
         players.splice(playerIndex, 1)
 
-        this.setState({players, mutualGames: null})
+        this.setState({players, mutualGames: null, message: null})
     }
 
-    playerNameHandle = (playerIndex, e) => {
-        const players = [...this.state.players]
-        players[playerIndex] = {name: e.target.value}
+    getPlayerInfo = (name) => {
+        if (!name) return
 
-        this.setState({players, mutualGames: null})
-    }
-
-    getPlayerInfo = (playerIndex) => {
-        const players = [...this.state.players]
-        const player = players[playerIndex]
-        if(!player.name) return
-
-        player.loading = true
-        this.setState({players})
-
-        fetch(`${API_URL}/getPlayerInfo?player=${player.name}`)
+        return fetch(`${API_URL}/getPlayerInfo?player=${name}`)
             .then(r => {
                 if (r.status >= 200 && r.status < 300) {
                     return r.json()
                 } else {
                     return Promise.reject(new Error(r.statusText))
                 }
-            })
-            .then((profileInfo) => {
-                const players = [...this.state.players]
-                const player = players[playerIndex]
-
-                if(profileInfo) {
-                    player.avatar = profileInfo.avatarfull
-                    player.steamId = profileInfo.steamid
-                    player.loading = false
-
-                    this.setState({players})
-                }
-            })
-            .catch(error => {
-                console.error(error)
             })
     }
 
@@ -132,7 +107,7 @@ class App extends React.Component {
 
         this.setState({mutualGamesLoading: true, message: null})
 
-        const request = `steamIds=${this.state.players.map(p => p.steamId).join(',')}`
+        const request = `steamIds=${this.state.players.filter(p => p.steamId).map(p => p.steamId).join(',')}`
 
         fetch(`${API_URL}/getMutualGames?${request}`)
             .then(r => {
@@ -152,6 +127,17 @@ class App extends React.Component {
             })
     }
 
+    constructor() {
+        super()
+
+        this.state = {
+            players: [],
+            mutualGames: null,
+            message: null,
+            mutualGamesLoading: false,
+        }
+    }
+
     render() {
         return (
             <Container>
@@ -165,18 +151,18 @@ class App extends React.Component {
                             <Player
                                 key={i}
                                 player={player}
-                                onChange={this.playerNameHandle.bind(this, i)}
-                                onBlur={this.getPlayerInfo.bind(this, i)}
                                 onRemove={this.removePlayer.bind(this, i)}
                             />
                         ))}
-                        <AppendPlayer onClick={this.appendPlayer} />
+                        <AppendPlayer
+                            appendPlayer={this.appendPlayer}
+                        />
                     </Players>
 
                     <p className="text-center">
                         <Button
                             disabled={this.state.players.filter(p => p.steamId).length < 2}
-                        >Submit</Button>
+                        >Find mutual games</Button>
                     </p>
                 </form>
 

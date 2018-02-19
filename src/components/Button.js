@@ -23,6 +23,10 @@ const Button = styled(({children, ...rest}) => (
         text-decoration: none;
         color: #fff;
     }
+    
+    &:active{
+        transform: translate3d(0, 2px, 0);
+    }
 
     &:disabled{
         opacity: .5;
