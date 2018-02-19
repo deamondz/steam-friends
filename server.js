@@ -15,7 +15,7 @@ server.use(function (req, res, next) {
         .reduce((p, c) => (new RegExp(c)).test(origin) || p, false)
 
     if (isAllowed) {
-        res.setHeader('Access-Control-Allow-Origin', origin)
+        res.header('Access-Control-Allow-Origin', origin)
     }
 
     res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept')
@@ -43,7 +43,7 @@ function getOwnedMPGames(steamId, callback) {
         url: `http://api.steampowered.com/IPlayerService/GetOwnedGames/v0001/?key=${STEAM_KEY}&format=json&input_json=${JSON.stringify(params)}`,
         json: true,
     }, function (error, response, body) {
-        callback(body.response.games || [])
+        callback(body.response ? body.response.games : [])
     })
 }
 
@@ -64,22 +64,45 @@ function filterMutualGames(players) {
 }
 
 server.get('/api/getMutualGames', function (req, res) {
-    const players = req.query.players.split(',')
+    const steamIds = req.query.steamIds.split(',')
     const responses = {}
     let responseCount = 0
 
-    players.forEach(player => {
-        getSteamIdByName(player, (steamId) => {
-            getOwnedMPGames(steamId, (games) => {
+    steamIds.forEach(steamId => {
+        getOwnedMPGames(steamId, (games) => {
+            if (!games) {
+                res.status(404).end() //.json({message: 'Нет игр'})
+            } else {
                 responseCount++
-                responses[player] = games
+                responses[steamId] = games
 
-                if (responseCount === players.length) {
+                if (responseCount === steamIds.length) {
                     const mutualGames = filterMutualGames(responses)
 
-                    res.status(200).json(mutualGames)
+                    if (mutualGames.length) {
+                        res.status(200).json(mutualGames)
+                    } else {
+                        res.status(404).end()
+                    }
                 }
-            })
+            }
+        })
+    })
+})
+
+server.get('/api/getPlayerInfo', function (req, res) {
+    const {player} = req.query
+
+    getSteamIdByName(player, (steamId) => {
+        request({
+            url: `http://api.steampowered.com/ISteamUser/GetPlayerSummaries/v0002/?key=${STEAM_KEY}&steamids=${steamId}`,
+            json: true,
+        }, function (error, response, body) {
+            if (body && body.response.players.length) {
+                res.status(200).json(body.response.players[0])
+            } else {
+                res.status(404).end() //.json({message: 'Нет пользователя'})
+            }
         })
     })
 })
