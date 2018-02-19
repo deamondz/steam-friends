@@ -19,7 +19,7 @@ injectGlobal`
         font-size: 15px;
     }
 
-    html, body{
+    html, body, #root{
         width: 100%;
     }
 
@@ -48,7 +48,7 @@ injectGlobal`
     .text-center{ text-align: center }
 `
 
-const API_URL = 'http://localhost:3000/api'
+const API_URL = `//${window.location.host}/api`
 
 class App extends React.Component {
     appendPlayer = (name) => {

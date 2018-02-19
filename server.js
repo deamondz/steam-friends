@@ -4,10 +4,11 @@ const request = require('request')
 const server = express()
 const gamesDb = require('./games.json')
 
+const port = process.env.PORT || 3000
 const allowedOrigins = [/localhost/]
 const STEAM_KEY = '7D5F2FA02FF09ACA687DE979BE355B30'
 
-server.use(express.static('public'))
+server.use(express.static(__dirname + '/public'));
 
 server.use(function (req, res, next) {
     const origin = req.headers.origin
@@ -107,4 +108,6 @@ server.get('/api/getPlayerInfo', function (req, res) {
     })
 })
 
-server.listen(3000)
+server.listen(port, () => {
+    console.log('Server is running.')
+})
